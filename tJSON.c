@@ -4,10 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define TJSON_MALLOC    malloc
+#define TJSON_FREE      free
 
 JsonObject* MakeJsonObject(){
     JsonObject* ret;
-    ret = (JsonObject*) malloc(sizeof(JsonObject));
+    ret = (JsonObject*) TJSON_MALLOC(sizeof(JsonObject));
     ret->objects = NULL;
     ret->len = 0;
     ret->capacity = 0;
@@ -22,7 +24,7 @@ JsonObject* ExpanseJsonCap(JsonObject* *object){
         cap = cap == 0 ? 1 : cap;
         ret->len = (*object)->len;
         ret->capacity = cap*2;
-        ret->objects = malloc(sizeof(Jobj*) * (ret->capacity));
+        ret->objects = TJSON_MALLOC(sizeof(Jobj*) * (ret->capacity));
                 //calloc((ret->capacity),sizeof(Jobj*));
         for(int i = 0;i<(ret->len);i++){
             ret->objects[i] = (*object)->objects[i];
@@ -30,40 +32,40 @@ JsonObject* ExpanseJsonCap(JsonObject* *object){
         for(int i = (ret->len);i<(ret->capacity);i++){
             ret->objects[i] = NULL;
         }
-        free((*object)->objects);
-        free(*object);
+        TJSON_FREE((*object)->objects);
+        TJSON_FREE(*object);
     }
     return ret;
 }
 
 JString* JsonString(const char* name){
     JString* ret;
-    ret = (JString*) malloc(sizeof(JString));
+    ret = (JString*) TJSON_MALLOC(sizeof(JString));
     ret->len=strlen(name);
-    ret->str = (char*) malloc(ret->len);
+    ret->str = (char*) TJSON_MALLOC(ret->len);
     memcpy(ret->str,name,ret->len);
     return ret;
 }
 
 int* JsonInteger(int i){
-    int* ret = malloc(sizeof(int));
+    int* ret = TJSON_MALLOC(sizeof(int));
     *ret = i;
     return ret;
 }
 
 char* JsonBool(char torf){
-    char* ret = malloc(sizeof(char));
+    char* ret = TJSON_MALLOC(sizeof(char));
     *ret = torf == 't'? 't':'f';
     return ret;
 }
 
 void FreeJString(JString** jstr){
     (*jstr)->len = 0;
-    free(*jstr);
+    TJSON_FREE(*jstr);
 }
 
 Jobj* MakeJobj(const char* key, JValType type, void* content){
-    Jobj* ret = malloc(sizeof(Jobj));
+    Jobj* ret = TJSON_MALLOC(sizeof(Jobj));
     ret->content=content;
     ret->type=content?type:JNULL;
     ret->key = JsonString(key);
@@ -72,7 +74,7 @@ Jobj* MakeJobj(const char* key, JValType type, void* content){
 
 JsonArray* MakeJArray(){
     JsonArray* ret;
-    ret = malloc(sizeof(JsonArray));
+    ret = TJSON_MALLOC(sizeof(JsonArray));
     ret->len = 0;
     ret->array = NULL;
     return ret;
@@ -87,12 +89,12 @@ void FreeJobj(Jobj* *obj){
             FreeJString(&str);
         }else if ((*obj)->type == JINTEGER){
             int* intv = (int*) ((*obj)->content);
-            free(intv);
+            TJSON_FREE(intv);
         }else if((*obj)->type == JNULL){
             // nothing release
         }else if((*obj)->type == JBOOL){
             char* torf = (char*) ((*obj)->content);
-            free(torf);
+            TJSON_FREE(torf);
         }else if ((*obj)->type == JSONARR){
             JsonArray* jarr = (JsonArray*)((*obj)->content);
             JLinkedObj* jcur = jarr->array;
@@ -101,11 +103,11 @@ void FreeJobj(Jobj* *obj){
                  FreeJobj(&(jcur->content));
                  precur = jcur;
                  jcur = jcur->next;
-                 free(precur);
+                 TJSON_FREE(precur);
             }
         }
         FreeJString(&((*obj)->key));
-        free(*obj);
+        TJSON_FREE(*obj);
     }
     
 }
@@ -114,8 +116,8 @@ void FreeJsonObject(JsonObject* *object){
     for (int i = 0;i<((*object)->len);i++){
         FreeJobj(&((*object)->objects[i]));
     }
-    free((*object)->objects);
-    free(*object);
+    TJSON_FREE((*object)->objects);
+    TJSON_FREE(*object);
 }
 
 void JsonPrint(const Jobj* obj){
@@ -254,11 +256,11 @@ void JsonAdd(JsonArray* *jarray, const char* key, JValType type, void* val){
     }
     
     if(pcur == NULL){ // first
-        (*jarray)->array = malloc(sizeof(JLinkedObj));
+        (*jarray)->array = TJSON_MALLOC(sizeof(JLinkedObj));
         (*jarray)->array->next = NULL;
         (*jarray)->array->content = MakeJobj(key,type,val);
     }else {
-        pcur->next = malloc(sizeof(JLinkedObj));
+        pcur->next = TJSON_MALLOC(sizeof(JLinkedObj));
         pcur->next->next = NULL;
         pcur->next->content = MakeJobj(key,type,val);
     }
