@@ -19,4 +19,5 @@ typedef struct{
     JParseElement prev;
 }JPElement;
 
+int JsonParse(const char* msg, size_t len);
 #endif

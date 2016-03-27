@@ -20,7 +20,6 @@ struct t_Stackion{
 
 typedef struct{
     AStackion* root;
-    AStackion* head;
     AStackion* tail;
 }AStack;
 

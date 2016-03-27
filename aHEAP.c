@@ -44,7 +44,6 @@ AStack* MakeAStack(){
     AStack* ret;
     ret = AHEAP_MALLOC(sizeof(AStack));
     ret->root = NULL;
-    ret->head = NULL;
     ret->tail = NULL;
     return ret;
 }
@@ -69,7 +68,6 @@ void PushAStack(AStack* *stack, void* content){
     AStackion* cur = (*stack)->root;
     if(cur == NULL){ // first element
         (*stack)->root = newstack;
-        (*stack)->head = newstack;
         (*stack)->tail = newstack;
     }else{
         while(cur->next != NULL) cur = cur->next;
@@ -82,10 +80,16 @@ void PushAStack(AStack* *stack, void* content){
 int PopAStack(AStack* *stack, void* *content){
     AStackion* cur = (*stack)->tail;
     if(cur != NULL){
-        (*stack)->tail = cur->prev;
-        if(cur->prev != NULL)
-            cur->prev->next = NULL;
-        *content = cur->content;
+        if(cur == (*stack)->root){ // pop first element
+            (*stack)->root = NULL;
+            (*stack)->tail = NULL;
+        }else{
+            (*stack)->tail = cur->prev;
+            if(cur->prev != NULL)
+                cur->prev->next = NULL;
+            if(content != NULL)
+                *content = cur->content;
+        }
         AHEAP_FREE(cur);
         return 1;
     }

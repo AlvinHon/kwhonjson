@@ -6,6 +6,7 @@
 #include "jPath.h"
 #include "aHEAP.h"
 #include "jParseExpr.h"
+#include "jParser.h"
 
 void testJSON(void){
     JsonObject* content = MakeJsonObject();
@@ -33,14 +34,7 @@ void testJSON(void){
     printf("free json\n");
 }
 
-
-int main(int argc, char*argv[]){
-    Jobj job;
-	printf("CJSON %d!!\n",argc);
-	for(int i = 0;i<argc;i++){
-		printf("%s\n",argv[i]);
-	}
-    
+void testHeap(void){
     AStack* gstack = MakeAStack();
     PushAStack(&gstack,"abc");
     PushAStack(&gstack,"abcdef");
@@ -59,9 +53,17 @@ int main(int argc, char*argv[]){
     
     FreeAStack(&gstack,NULL);
     printf("done\n");
+}
+
+int main(int argc, char*argv[]){
+    Jobj job;
+	printf("CJSON %d!!\n",argc);
+	for(int i = 0;i<argc;i++){
+		printf("%s\n",argv[i]);
+	}
     
-    printf("%c %d %d %d %d\n",jexpObj.checkc,jexpObj.exprRules[0].rules[0],jexpObj.exprRules[0].ruleLen,
-            jexpObj.exprRules[1].rules[1],jexpObj.exprRules[1].result);
     
+    const char checking[] = "{\"abc\":\"123\"}";
+    JsonParse(checking, sizeof(checking));
 	return 0;
 }

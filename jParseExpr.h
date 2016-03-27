@@ -23,6 +23,7 @@ typedef enum{
     JPE_NULL
 }JParseElement;
 
+
 typedef struct{
     JParseElement* rules;
     int ruleLen;
@@ -35,9 +36,10 @@ typedef struct{
     int numRules; // len of exprRules
 }JExpression;
 
-extern const JExpression jexpObj;
-extern const JExpression jexpKey;
-extern const JExpression jexpJval;
-extern const JExpression jexpJvals;
-extern const JExpression jexpJson;
+extern const char* JPENAME[];
+#define SIZE_JEXPRRULES 10
+extern const JExprRule JExprRules[];
+
+const JExprRule* JResultFromExp(int (*allhit)(const JParseElement*,int,void**), void** checker);
+
 #endif
