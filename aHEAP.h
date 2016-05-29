@@ -29,4 +29,18 @@ void FreeAStack(AStack* *stack, void (*cxtfree)(void**));
 void PushAStack(AStack* *stack, void* content);
 int PopAStack(AStack* *stack, void* *content);
 
+typedef struct{
+    size_t len;
+    size_t size;
+    size_t elemsize;
+    char* arr;
+}DArray;
+
+DArray* MakeDArray(size_t elemsize);
+void FreeDArray(DArray** arrptr);
+int AddDArray(DArray** arrptr, char elem);
+void ReDArray(DArray** arrptr);
+
+
+
 #endif

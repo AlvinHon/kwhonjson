@@ -2,7 +2,6 @@
 #include "jParser.h"
 
 
-
 JPElement* MakeJPElement(char c, JParseElement g){
    JPElement* ret = JPARSER_MALLOC(sizeof(JPElement));
    ret->c = c;
@@ -47,7 +46,7 @@ int RuleChecker(const JParseElement* jarr,int arrlen,void** stackobj){
             return 0;
         }
         //skip all any type char
-        while(tail->prev != NULL && (((JPElement*)(tail->prev->content))->group) == JPE_ANY) tail = tail->prev;
+        while(tail->prev != NULL && (((JPElement*)(tail->prev->content))->group) == JPE_ANY) {tail = tail->prev;}
         // not JPE_ANY for next check
         ((RuleCheckObject*)(*stackobj))->terminateAt = tail;
         tail = tail->prev;
@@ -56,17 +55,25 @@ int RuleChecker(const JParseElement* jarr,int arrlen,void** stackobj){
     return 1;
 }
 
+
 // msg: preparsed " -> \" in content
-int JsonParse(const char* msg, size_t len){
+int JsonParse(const char* msg, size_t len,JsonObject** resJson){
+    if(resJson == NULL)
+      return -1;
     AStack* frameStack = MakeAStack();
-    if(frameStack == NULL) 
-        return 0;
+    if(frameStack == NULL)
+      return -2;
+    JPEContainer* jcont = InitContainer(resJson);
+    if(!jcont){
+      return -3;
+    }
+
     // TODO check also first and last char must be { and }
-    printf("len: %zu\n",len);
+    JPARSE_TRACE("len: %zu\n",len);
     for(size_t i = 0;i<len;i++){
         // do escape here
         char msgc = msg[i];
-        printf("check %c ..\n",msgc);
+
         if(msgc == '\\' && (i!= len-1)){
             if(EscapeCharElement(msg[i+1]) != JPE_NULL)
                 continue; // escape here
@@ -81,7 +88,7 @@ int JsonParse(const char* msg, size_t len){
         }else{
             JPElement* op = MakeJPElement(msgc,element);
             PushAStack(&frameStack,op);
-            printf("push %s\n",JPENAME[element]);
+            JPARSE_TRACE("push %s\n",JPENAME[element]);
         }
         
         // check stack
@@ -94,32 +101,60 @@ int JsonParse(const char* msg, size_t len){
             ptrQObj->terminateAt = NULL;
             jres = JResultFromExp(&RuleChecker,(void**)&(ptrQObj));
             if(jres != NULL){
-                // some rules having result 
-                // pop first and then put the result
-               JParseElement lastelemtopop = jres->rules[(jres->ruleLen) - 1];
-               
-               if(ptrQObj-> terminateAt != NULL){
-                   while(frameStack->tail != NULL && frameStack->tail != ptrQObj->terminateAt){
-                       printf("pop %s..\n",JPENAME[((JPElement*)(frameStack->tail->content))->group]);
-                       PopAStack(&frameStack,NULL);
-                   }
-               }
-               if(frameStack->tail == NULL){ // imposible
-                   printf("impossible tail null\n");
-                   return 0;
-               }
-               // tail is last element, do last pop
-               printf("pop %s..\n",JPENAME[((JPElement*)(frameStack->tail->content))->group]);
-               PopAStack(&frameStack,NULL);
-               
-               // push result
-               printf("push %s\n",JPENAME[jres->result]);
-               JPElement* pushelem = MakeJPElement(msgc,jres->result);
-               PushAStack(&frameStack,pushelem);
+              JPARSE_TRACE("rule result %s..\n",JPENAME[jres->result]);
+              DArray* chrarr = NULL;
+              if(jres->result == JPE_OBJ){
+                chrarr = MakeDArray(1);
+              }
+
+              // some rules having result 
+              // pop first and then put the result
+              JParseElement lastelemtopop = jres->rules[(jres->ruleLen) - 1];
+
+              if(ptrQObj-> terminateAt != NULL){
+                while(frameStack->tail != NULL && frameStack->tail != ptrQObj->terminateAt){
+                   char popc = (char)(((JPElement*)(frameStack->tail->content))->c);
+                   JParseElement popg = ((JPElement*)(frameStack->tail->content))->group;
+                   JPARSE_TRACE("pop %s (%c)..\n",JPENAME[popg],popc);
+
+                   if(popg == JPE_ANY)
+                      AddDArray(&chrarr,popc);
+                   
+                   PopAStack(&frameStack,NULL);
+                }
+              }
+              if(frameStack->tail == NULL){ // imposible
+                JPARSE_TRACE("impossible tail null\n");
+                return 0; // FIXME
+              }
+              // tail is last element, do last pop
+              JPARSE_TRACE("pop %s (%c)..\n",
+                JPENAME[((JPElement*)(frameStack->tail->content))->group],
+                (char)(((JPElement*)(frameStack->tail->content))->c));
+              PopAStack(&frameStack,NULL);
+
+              // push result
+              JPARSE_TRACE("push %s\n",JPENAME[jres->result]);
+              JPElement* pushelem = MakeJPElement(msgc,jres->result);
+              PushAStack(&frameStack,pushelem);
+
+              // make linkage
+              ReDArray(&chrarr);
+              AddDArray(&chrarr,0x0);
+              const char* strinput = NULL;
+              if(chrarr != NULL)
+                strinput = chrarr->arr;
+              
+              if(jres->ruleMakeJson != NULL){
+                jres->ruleMakeJson(jcont,strinput);
+              }
+              
+              FreeDArray(&chrarr);
+
             }
         }while(jres != NULL);
     }
-    
+    FreeContainer(&jcont);
     FreeAStack(&frameStack,&FreeJPElement);
     return 1;
 }

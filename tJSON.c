@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define TJSON_MALLOC    malloc
 #define TJSON_FREE      free
@@ -36,6 +37,37 @@ JsonObject* ExpanseJsonCap(JsonObject* *object){
         TJSON_FREE(*object);
     }
     return ret;
+}
+
+
+int DefineJType(const char* content, size_t len, JValType* out){
+    size_t i;
+    int dig; // 0 nat, 1: not digit, 2: not bool
+    if(len > 0){
+        dig = 0;
+        for(i=0;i<len;i++){
+            if(!isdigit(content[i])){
+                dig = 1;
+                break;
+            }
+        }
+        if(dig == 0){
+            *out = JINTEGER;
+        }
+        else if(memcmp(content,"null",4) == 0){
+            *out = JNULL;
+        }
+        else if(memcmp(content,"True",4) == 0 ||
+            memcmp(content,"true",4) == 0 ||
+            memcmp(content,"False",5) == 0 ||
+            memcmp(content,"false",5) == 0 
+            ){
+            *out = JBOOL;
+        }
+        *out = JSTRING;
+        return 1;
+    }
+    return 0;
 }
 
 JString* JsonString(const char* name){
@@ -120,60 +152,66 @@ void FreeJsonObject(JsonObject* *object){
     TJSON_FREE(*object);
 }
 
-void JsonPrint(const Jobj* obj){
+void JsonFPrint(const Jobj* obj, FILE* f){
     if(obj != NULL){
         // print key first for json object
         if(obj->type == JSONOBJ || obj->type==JSTRING || obj->type == JSONARR
             || obj->type == JINTEGER)
-            printf("\"%.*s\":",obj->key->len,obj->key->str);
+            fprintf(f,"\"%.*s\":",obj->key->len,obj->key->str);
         
         if(obj->type == JSONOBJ){
-            printf("{");
+            fprintf(f,"{");
             JsonObjectPrint((const JsonObject*)(obj->content));
-            printf("}");
+            fprintf(f,"}");
         }else if (obj->type == JINTEGER){
             int* intv = (int*) (obj->content);
-            printf("%d",*intv);
+            fprintf(f,"%d",*intv);
         }else if (obj->type == JNULL){
-            printf("null");
+            fprintf(f,"null");
         }else if (obj->type == JBOOL){
             char* torf = (char*)(obj->content);
-            printf("%s",(*torf) == 't' ? "true":"false");
+            fprintf(f,"%s",(*torf) == 't' ? "true":"false");
         }else if(obj->type==JSTRING  && obj->content != NULL){
             JString* str = (JString*) (obj->content);
-            printf("\"%.*s\"",str->len,(const char*)(str->str));
+            fprintf(f,"\"%.*s\"",str->len,(const char*)(str->str));
         }else if (obj->type == JSONARR){
-            printf("[");
+            fprintf(f,"[");
             JsonArray* jarr = (JsonArray*) (obj->content);
             JLinkedObj* jcur = jarr->array;
             if(jcur != NULL){
                 JsonPrint(jcur->content); // first item
                 if(jcur->next != NULL)
-                    printf(",");
+                    fprintf(f,",");
                 
                 while(jcur->next != NULL){
                     jcur = jcur->next;
                     JsonPrint(jcur->content);
                     if(jcur->next != NULL)
-                        printf(",");
+                        fprintf(f,",");
                 }
                 
             }
-            printf("]");
+            fprintf(f,"]");
         }
     }
 }
+void JsonPrint(const Jobj* obj){
+    JsonFPrint(obj,stdout);
+}
 
-void JsonObjectPrint(const JsonObject* object){
-    if(object->root)
-        printf("{");
+void JsonObjectFPrint(const JsonObject* object, FILE* f){
+     if(object->root)
+        fprintf(f,"{");
     for(int i = 0;i<object->len;i++){
         JsonPrint(object->objects[i]); 
         if( i != (object->len -1))
-            printf(",");
+            fprintf(f,",");
     }
     if(object->root)
-        printf("}\n");
+        fprintf(f,"}\n");
+}
+void JsonObjectPrint(const JsonObject* object){
+   JsonObjectFPrint(object,stdout);
 }
 
 

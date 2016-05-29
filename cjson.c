@@ -55,15 +55,31 @@ void testHeap(void){
     printf("done\n");
 }
 
+void testDArray(void){
+    DArray* da = MakeDArray(1);
+    char inp[5] = {'a','b','d','e','h'};
+    for(int i = 0;i<5;i++){
+        printf("add %c %d ",inp[i],AddDArray(&da,inp[i]));
+        printf("%zu\n",da->size);
+    }
+    FreeDArray(&da);
+}
+
+void testParseJson(void){
+    const char checking[] = "{\"abc\":\"123\",\"def\":\"apple\"}";
+    JsonObject* jsonobj = MakeJsonObject();
+    JsonParse(checking, strlen(checking),&jsonobj);
+    JsonObjectPrint(jsonobj);
+    FreeJsonObject(&jsonobj);
+}
+
+
 int main(int argc, char*argv[]){
-    Jobj job;
 	printf("CJSON %d!!\n",argc);
 	for(int i = 0;i<argc;i++){
 		printf("%s\n",argv[i]);
 	}
     
-    
-    const char checking[] = "{\"abc\":\"123\"}";
-    JsonParse(checking, sizeof(checking));
+    testParseJson();
 	return 0;
 }

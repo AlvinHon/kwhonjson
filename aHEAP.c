@@ -6,6 +6,7 @@
 
 #define AHEAP_MALLOC    malloc
 #define AHEAP_FREE      free
+#define AHEAP_MEMCPY    memcpy
 
 /*
 void* testmalloc(size_t size){
@@ -94,4 +95,60 @@ int PopAStack(AStack* *stack, void* *content){
         return 1;
     }
     return 0;
+}
+
+
+DArray* MakeDArray(size_t elemsize){
+    DArray* ret = (DArray*) AHEAP_MALLOC(sizeof(DArray));
+    ret-> arr = AHEAP_MALLOC (2*elemsize);
+    ret->elemsize = elemsize;
+    ret->len = 0;
+    ret->size = 2;
+    return ret;
+}
+
+void FreeDArray(DArray** arrptr){
+    if(*arrptr != NULL){
+        AHEAP_FREE((*arrptr)->arr);
+        AHEAP_FREE(*arrptr);
+    }
+}
+
+
+int AddDArray(DArray** arrptr, char elem){
+    if(*arrptr == NULL)
+        return -1;
+    if(((*arrptr)->len) +1 == (*arrptr)->size){ // expand
+        void* narr = AHEAP_MALLOC((*arrptr)->elemsize * (*arrptr)->size * 2);
+        if(narr == NULL)
+            return -1;
+        AHEAP_MEMCPY(narr,(*arrptr)->arr,(*arrptr)->len*(*arrptr)->elemsize);
+        AHEAP_FREE((*arrptr)->arr);
+        (*arrptr)->arr = narr;
+        (*arrptr)->size *= 2;
+    }
+
+    // add
+    (*arrptr)->arr[(*arrptr)->len] = elem;
+    (*arrptr)->len ++;
+    return (*arrptr)->len;
+
+}
+
+
+void ReDArray(DArray** arrptr){
+    size_t start;
+    size_t end;
+    char swap;
+    if(*arrptr != NULL && (*arrptr)->len > 1){
+        start = 0;
+        end = (*arrptr)->len -1;
+        while(start < end){
+            swap = (*arrptr)->arr[start];
+            (*arrptr)->arr[start] = (*arrptr)->arr[end];
+            (*arrptr)->arr[end] = swap;
+            start ++;
+            end --;
+        }
+    }
 }
