@@ -1,28 +1,29 @@
-all: cjson
+CC = gcc
+CFLAGS = -g -Wall
+SRCS = jVoid.c jPATH.c tJSON.c aHEAP.c jParseExpr.c jParser.c
 
-cjson: cjson.o jvoid.o jpath.o tjson.o aheap.o jparser.o jparseexpr.o
-	gcc bin/cjson.o bin/jvoid.o  bin/tjson.o bin/jpath.o bin/aheap.o bin/jparseexpr.o bin/jparser.o -o cjson
+OBJS = $(SRCS:.c=.o)
+BINDIR=bin
+BINOBJS = $(OBJS:%.o=$(BINDIR)/%.o)
+MAIN = cjson
 
-cjson.o: cjson.c
-	gcc -c cjson.c -o bin/cjson.o
+.PHONY: depend clean
 
-jvoid.o: jVoid.c
-	gcc -c jVoid.c -o bin/jvoid.o
+all: $(MAIN)
 
-jpath.o: jPATH.c
-	gcc -c jPATH.c -o bin/jpath.o
+$(MAIN): $(OBJS)
+	$(CC) $(CFLAGS) -c $(MAIN).c -o $(BINDIR)/$(MAIN).o
+	$(CC) $(CFLAGS) -o $(MAIN) $(BINOBJS) $(BINDIR)/$(MAIN).o
 
-tjson.o: tJSON.c
-	gcc -c tJSON.c -o bin/tjson.o
+library: $(OBJS)
+	ar -cvq lib/kwhonjson.a $(BINOBJS)
 
-aheap.o: aHEAP.c
-	gcc -c aHEAP.c -o bin/aheap.o
-
-jparseexpr.o: jParseExpr.c
-	gcc -c jParseExpr.c -o bin/jparseexpr.o
-
-jparser.o: jParser.c
-	gcc -c jParser.c -o bin/jparser.o
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $(BINDIR)/$@
 
 clean:
-	rm bin/*o cjson
+	rm ${BINDIR}/*.o lib/*.a $(MAIN)
+
+depend: $(SRCS)
+	makedepend $^
+	# DO NOT DELETE

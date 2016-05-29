@@ -109,7 +109,6 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
 
               // some rules having result 
               // pop first and then put the result
-              JParseElement lastelemtopop = jres->rules[(jres->ruleLen) - 1];
 
               if(ptrQObj-> terminateAt != NULL){
                 while(frameStack->tail != NULL && frameStack->tail != ptrQObj->terminateAt){
