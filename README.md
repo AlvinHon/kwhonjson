@@ -53,7 +53,7 @@ get 123456
 const char checking[] = "{\"abc\":123,\"def\":\"apple\",\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":12},\"arr\":[\"arr1\":1234]}";
 JsonObject* jsonobj = MakeJsonObject();
 JsonParse(checking, strlen(checking),&jsonobj);
-JsonObjectPrint(jsonobj,stdout);
+JsonObjectPrint(jsonobj);
 FreeJsonObject(&jsonobj);
 ```
 output
@@ -63,46 +63,43 @@ output
 
 #### parsing special cases
 
-integer value should have no non-digit characters and not use single quote
+##### integer value should have no non-digit characters and not use single quote
 
 ```c
 "{\"abc\":123}"
 "{\"abc\":123b}"
 "{\"abc\":\"123\"}
 ```
-interpretation
+interpretation:
 ```
 {"abc":123}
 {"abc":"123b"}
 {"abc":"123"}
 ```
 
-ignoring multiple seperators
+##### ignoring multiple seperators
 
 ```c
 "{\"abc\":123,,,,\"def\":456}"
 ```
-interpretation
+interpretation:
 ```
 {"abc":123,"def":456}
 ```
 
-null input displays null message directly
+##### null input displays null message directly
 
 ```c
 "{\"abc\":}"
 "{\"abc\":,\"def\":}"
 ``` 
-interpretation
+interpretation:
 ```
 {"abc":null}
 {"abc":null,"def":null}
 ```
 
-
-
 Progress ( ~ 80%)
-
 ---
 
 String, array, integer, bool and null are the only currenly supported types.
