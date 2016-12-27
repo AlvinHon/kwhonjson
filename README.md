@@ -102,6 +102,7 @@ interpretation
 
 
 Progress ( ~ 80%)
+
 ---
 
 String, array, integer, bool and null are the only currenly supported types.
