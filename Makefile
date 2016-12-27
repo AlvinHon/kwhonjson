@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall
-SRCS = jVoid.c jPATH.c tJSON.c aHEAP.c jParseExpr.c jParser.c
+SRCS = jVoid.c jPATH.c tJSON.c aHEAP.c jParseExpr.c jParser.c jUtil.c
 
 OBJS = $(SRCS:.c=.o)
 BINDIR=bin

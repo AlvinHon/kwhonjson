@@ -34,13 +34,16 @@ struct t_JLinkedObj{
 typedef struct{
     JLinkedObj* array;
     int len;
+    void* root;
+    JValType rootType;
 }JsonArray;
 
 typedef struct{
     Jobj** objects;
     int len;
     int capacity;
-    int root;
+    void* root;
+    JValType rootType;
 }JsonObject;
 
 

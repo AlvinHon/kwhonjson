@@ -152,3 +152,13 @@ void ReDArray(DArray** arrptr){
         }
     }
 }
+
+void PrinfFDArray(DArray** arrptr, FILE* f){
+    int i;
+    if(*arrptr != NULL && (*arrptr)->len > 0){
+        for(i=0;i<(*arrptr)->len;i++){
+            fprintf(f,"%c",(*arrptr)->arr[i]);
+        }
+    }
+    fprintf(f,"\n");
+}

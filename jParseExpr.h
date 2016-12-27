@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tJSON.h"
+#include "jUtil.h"
 
 
 typedef enum{
@@ -13,11 +14,12 @@ typedef enum{
     JPE_STRTER,     // "
     JPE_SEPERATE,   // ,
     JPE_COLUMN,     // :
+    JPE_AOPEN,      // [
+    JPE_ACLOSE,     // ]
     JPE_OBJ,
     JPE_VAL,
-    JPE_VALS,
+    JPE_JVAL,
     JPE_MULTIVALS,
-    JPE_MULTIVALSS,
     JPE_KEY,
     JPE_JSON,
     JPE_ANY,
@@ -30,12 +32,21 @@ struct t_JLinkedJsonObject{
     JsonObject** obj;
 };
 
+typedef enum{
+    SelectPartialKey=0,
+    SelectPartialVal
+}SelectPartialType;
+
 typedef struct{
-  JsonObject** rootJson;
-  JLinkedJsonObject* insertable;
+  JsonObject** rootJson; // point to resulting jsonobject
+  union{
+      JsonObject* tmpJson;
+      JsonArray* tmpArr;
+  }tmpObj; // point to current jsonobject
+  JValType tmpObjType;
   char* partialKey;
   char* partialVal;
-  int selectKeyVal;
+  SelectPartialType selectKeyVal;
 }JPEContainer;
 
 #pragma pack(push,1)
@@ -56,7 +67,7 @@ typedef struct{
 
 
 extern const char* JPENAME[];
-#define SIZE_JEXPRRULES 10
+#define SIZE_JEXPRRULES 26
 extern const JExprRule JExprRules[];
 
 const JExprRule* JResultFromExp(int (*allhit)(const JParseElement*,int,void**), void** checker);

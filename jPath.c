@@ -9,7 +9,6 @@
 PathStr* MakePath(char seperator, const char* path, int len){
     PathStr* ret = NULL;
     if(len > 0){
-        printf("len: %d %s\n",len,path);
         int start = 0;
         for(int i = 0;i<len;i++){
             if(path[i] == seperator || i == (len-1)){

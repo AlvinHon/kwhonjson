@@ -14,29 +14,30 @@ JsonObject* MakeJsonObject(){
     ret->objects = NULL;
     ret->len = 0;
     ret->capacity = 0;
-    ret->root = 1;
+    ret->root = NULL;
     return ret;
 }
 
 JsonObject* ExpanseJsonCap(JsonObject* *object){
-    JsonObject* ret = MakeJsonObject();
-    if(ret != NULL){
-        int cap = (*object)->capacity;
-        cap = cap == 0 ? 1 : cap;
-        ret->len = (*object)->len;
-        ret->capacity = cap*2;
-        ret->objects = TJSON_MALLOC(sizeof(Jobj*) * (ret->capacity));
-                //calloc((ret->capacity),sizeof(Jobj*));
-        for(int i = 0;i<(ret->len);i++){
-            ret->objects[i] = (*object)->objects[i];
-        }
-        for(int i = (ret->len);i<(ret->capacity);i++){
-            ret->objects[i] = NULL;
-        }
-        TJSON_FREE((*object)->objects);
-        TJSON_FREE(*object);
+    int len = (*object)->len;
+    int cap = (*object)->capacity;
+    cap = cap == 0 ? 1 : cap*2;
+    Jobj** newArr = TJSON_MALLOC(sizeof(Jobj*) * (cap));
+    if(newArr == NULL)
+        return NULL;
+    for(int i = 0;i<len;i++){
+        newArr[i] = (*object)->objects[i];
     }
-    return ret;
+    for(int i =len;i<cap;i++){
+        newArr[i] = NULL;
+    }
+    if((*object)->objects != NULL){
+        TJSON_FREE((*object)->objects);
+    }
+    (*object)->objects = newArr;
+    (*object)->len = len;
+    (*object)->capacity = cap;
+    return *object;
 }
 
 
@@ -156,7 +157,7 @@ void JsonFPrint(const Jobj* obj, FILE* f){
     if(obj != NULL){
         // print key first for json object
         if(obj->type == JSONOBJ || obj->type==JSTRING || obj->type == JSONARR
-            || obj->type == JINTEGER)
+            || obj->type == JINTEGER || obj->type == JNULL )
             fprintf(f,"\"%.*s\":",obj->key->len,obj->key->str);
         
         if(obj->type == JSONOBJ){
@@ -179,7 +180,7 @@ void JsonFPrint(const Jobj* obj, FILE* f){
             JsonArray* jarr = (JsonArray*) (obj->content);
             JLinkedObj* jcur = jarr->array;
             if(jcur != NULL){
-                JsonPrint(jcur->content); // first item
+                JsonFPrint(jcur->content,f); // first item
                 if(jcur->next != NULL)
                     fprintf(f,",");
                 
@@ -200,15 +201,15 @@ void JsonPrint(const Jobj* obj){
 }
 
 void JsonObjectFPrint(const JsonObject* object, FILE* f){
-     if(object->root)
+     if(object->root == NULL)
         fprintf(f,"{");
     for(int i = 0;i<object->len;i++){
         JsonPrint(object->objects[i]); 
         if( i != (object->len -1))
             fprintf(f,",");
     }
-    if(object->root)
-        fprintf(f,"}\n");
+    if(object->root == NULL)
+      fprintf(f,"}\n");
 }
 void JsonObjectPrint(const JsonObject* object){
    JsonObjectFPrint(object,stdout);
@@ -222,7 +223,11 @@ JsonObject* JsonSet(JsonObject* *object, const char* key, JValType type, void* v
     }
     if((*object) != NULL){
         if(type == JSONOBJ){
-            ((JsonObject*)(val))->root = 0;
+            ((JsonObject*)(val))->root = *object;
+            ((JsonObject*)(val))->rootType = JSONOBJ;
+        }else if(type==JSONARR){
+            ((JsonArray*)(val))->root = *object;
+            ((JsonArray*)(val))->rootType = JSONOBJ;
         }
         (*object)->objects[(*object)->len] = MakeJobj(key,type,val);
         (*object)->len = nlen;
@@ -297,9 +302,19 @@ void JsonAdd(JsonArray* *jarray, const char* key, JValType type, void* val){
         (*jarray)->array = TJSON_MALLOC(sizeof(JLinkedObj));
         (*jarray)->array->next = NULL;
         (*jarray)->array->content = MakeJobj(key,type,val);
+        
     }else {
         pcur->next = TJSON_MALLOC(sizeof(JLinkedObj));
         pcur->next->next = NULL;
         pcur->next->content = MakeJobj(key,type,val);
     }
+
+    if(type == JSONOBJ){
+        ((JsonObject*)val)->root = *jarray;
+        ((JsonObject*)val)->rootType = JSONARR;
+    }else if(type==JSONARR){
+        ((JsonArray*)val)->root = *jarray;
+        ((JsonArray*)val)->rootType = JSONARR;
+    }
+
 }

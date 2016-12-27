@@ -19,11 +19,12 @@ void testJSON(void){
     JsonArray* jarr = MakeJArray();
     JsonAdd(&jarr,"food",JSTRING,JsonString("apple"));
     JsonAdd(&jarr,"drink",JSTRING,JsonString("water"));
+    JsonObject* friend = MakeJsonObject();
+    JsonSet(&friend,"name",JSTRING, JsonString("jon"));
+    JsonAdd(&jarr,"friend",JSONOBJ,friend);
     JsonSet(&content,"records",JSONARR,jarr);
     
-    printf("start print..\n");
     JsonObjectPrint(content);
-    printf("getting ... \n");
     
     JString* namej = JsonGetString(&content,"info/mobile");
     if(namej != NULL)
@@ -31,7 +32,6 @@ void testJSON(void){
     
     
     FreeJsonObject(&content);
-    printf("free json\n");
 }
 
 void testHeap(void){
@@ -66,7 +66,7 @@ void testDArray(void){
 }
 
 void testParseJson(void){
-    const char checking[] = "{\"abc\":\"123\",\"def\":\"apple\"}";
+    const char checking[] = "{\"abc\":123,\"def\":,\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":},,,\"arr\":[\"arr1\":1234]}";
     JsonObject* jsonobj = MakeJsonObject();
     JsonParse(checking, strlen(checking),&jsonobj);
     JsonObjectPrint(jsonobj);
@@ -75,11 +75,6 @@ void testParseJson(void){
 
 
 int main(int argc, char*argv[]){
-	printf("CJSON %d!!\n",argc);
-	for(int i = 0;i<argc;i++){
-		printf("%s\n",argv[i]);
-	}
-    
-    testParseJson();
+    printf("https://github.com/AlvinHon/kwhonjson/\n");
 	return 0;
 }

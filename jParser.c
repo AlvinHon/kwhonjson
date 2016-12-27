@@ -20,6 +20,8 @@ JParseElement EscapeCharElement(char c){
         case '"': return JPE_STRTER;
         case ',': return JPE_SEPERATE;
         case ':': return JPE_COLUMN;
+        case '[': return JPE_AOPEN;
+        case ']': return JPE_ACLOSE;
         default: break;
     }
     return JPE_NULL;
@@ -33,16 +35,10 @@ typedef struct{
 int RuleChecker(const JParseElement* jarr,int arrlen,void** stackobj){
     AStackion* tail = ((RuleCheckObject*)(*stackobj))->tail;
     if(tail == NULL || (((JPElement*)(tail->content))->group) != jarr[0])  return 0;
-    //printf("rule check ");
+
     for(int i = 0;i<arrlen;i++){
-        if(tail == NULL){
-            //printf(" lll \n");
-            return (i == (arrlen-1));
-        }
         JParseElement jpele = (((JPElement*)(tail->content))->group);
-        //printf("(%d,%d)",jpele,jarr[i]);
         if(jarr[i] != jpele){
-            //printf("\n");
             return 0;
         }
         //skip all any type char
@@ -50,9 +46,12 @@ int RuleChecker(const JParseElement* jarr,int arrlen,void** stackobj){
         // not JPE_ANY for next check
         ((RuleCheckObject*)(*stackobj))->terminateAt = tail;
         tail = tail->prev;
+        if(tail == NULL){
+            return (i == (arrlen-1)) ? 1 : 0;
+        }
     }
-    //printf("\n");
     return 1;
+    
 }
 
 
@@ -82,10 +81,12 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
         // push char
         JParseElement element = EscapeCharElement(msgc);
         if(element == JPE_NULL){
+            JPARSE_TRACE("\tc-any: %c\n",msgc);
             JPElement* op = MakeJPElement(msgc,JPE_ANY);
             PushAStack(&frameStack,op);
             continue;
         }else{
+            JPARSE_TRACE("\tc-elem: %c\n",msgc);
             JPElement* op = MakeJPElement(msgc,element);
             PushAStack(&frameStack,op);
             JPARSE_TRACE("push %s\n",JPENAME[element]);
@@ -103,12 +104,14 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
             if(jres != NULL){
               JPARSE_TRACE("rule result %s..\n",JPENAME[jres->result]);
               DArray* chrarr = NULL;
-              if(jres->result == JPE_OBJ){
-                chrarr = MakeDArray(1);
-              }
+              chrarr = MakeDArray(1);
 
               // some rules having result 
               // pop first and then put the result
+              if(jres->ruleMakeJson != NULL && jres->result == JPE_NULL){
+                  jres->ruleMakeJson(jcont,NULL);
+                  break;
+              }
 
               if(ptrQObj-> terminateAt != NULL){
                 while(frameStack->tail != NULL && frameStack->tail != ptrQObj->terminateAt){
@@ -140,6 +143,7 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
               // make linkage
               ReDArray(&chrarr);
               AddDArray(&chrarr,0x0);
+
               const char* strinput = NULL;
               if(chrarr != NULL)
                 strinput = chrarr->arr;
@@ -149,7 +153,6 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
               }
               
               FreeDArray(&chrarr);
-
             }
         }while(jres != NULL);
     }
