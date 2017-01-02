@@ -28,6 +28,7 @@ AStack* MakeAStack();
 void FreeAStack(AStack* *stack, void (*cxtfree)(void**));
 void PushAStack(AStack* *stack, void* content);
 int PopAStack(AStack* *stack, void* *content);
+int LenAStack(const AStack* stack);
 
 typedef struct{
     size_t len;

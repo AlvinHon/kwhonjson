@@ -14,7 +14,7 @@
 #define JPARSER_MALLOC  malloc
 #define JPARSER_FREE    free
 
-#define JPARSE_TRACE NOPRINTF 
+#define JPARSE_TRACE    NOPRINTF 
 
 
 typedef struct{

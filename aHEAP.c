@@ -97,6 +97,16 @@ int PopAStack(AStack* *stack, void* *content){
     return 0;
 }
 
+int LenAStack(const AStack* stack){
+    int i=0;
+    AStackion* cur = (stack)->root;
+    while(cur != NULL && cur != (stack)->tail){
+        i++;
+        cur = cur->next;
+    }
+    return i;
+}
+
 
 DArray* MakeDArray(size_t elemsize){
     DArray* ret = (DArray*) AHEAP_MALLOC(sizeof(DArray));

@@ -11,6 +11,9 @@ const char* JPENAME[] = {
     "JPE_OBJ",
     "JPE_VAL",
     "JPE_JVAL",
+    "JPE_AOPENVAL",
+    "JPE_VALCLOSED",
+    "JPE_VALACLOSED",
     "JPE_MULTIVALS",
     "JPE_KEY",
     "JPE_JSON",
@@ -44,6 +47,12 @@ static void _objSetAdd(JPEContainer* container, const char* key, JValType type, 
     }
 }
 
+static void _objSetAddRawValue(JPEContainer* container, JValType type, void* val){
+    if(container->tmpObjType == JSONARR){ // must be array
+        JsonAddRawValue(&(container->tmpObj.tmpArr),type,val);
+    }
+}
+
 void ruleMakeKeyValue(JPEContainer* container, const char* keystr){
    _rulemakestring(container,keystr,container->selectKeyVal);
 }
@@ -66,16 +75,44 @@ void ruleMakeObjWoQuotes(JPEContainer* container, const char* keystr){
         return;
     }
 
-    container->selectKeyVal = SelectPartialVal;
-    _rulemakestring(container,keystr,container->selectKeyVal);
     if(IsStrNumber(keystr)){
         _objSetAdd(container,container->partialKey,JINTEGER, JsonInteger(atoi(keystr)));
-    }else if (strlen(keystr) > 0){
-        _objSetAdd(container,container->partialKey,JSTRING, JsonString(container->partialVal));
-    }else{
+    }
+    else if (IsStrBool(keystr)){
+        _objSetAdd(container,container->partialKey,JBOOL, JsonBool(*keystr));
+    }
+    else if (strlen(keystr) > 0){
+        _objSetAdd(container,container->partialKey,JSTRING, JsonString(keystr));
+    }
+    else{
         _objSetAdd(container,container->partialKey,JNULL, NULL);
     }
     container->selectKeyVal = SelectPartialKey;
+}
+
+void ruleMakePlainValue(JPEContainer* container, const char* keystr){
+    if(!container || !container->partialKey || keystr == NULL){
+        return;
+    }
+
+    if(IsStrNumber(keystr)){
+        _objSetAddRawValue(container,PLAIN_INTEGER,JsonInteger(atoi(keystr)));
+    }
+    else if(IsStrBool(keystr)){
+        _objSetAddRawValue(container,PLAIN_BOOL,JsonBool(*keystr));
+    }
+    else if (strlen(keystr) > 0){
+        _objSetAddRawValue(container,PLAIN_STRING,JsonString(keystr));
+    }
+    // else not accept null type in array
+}
+
+void ruleMakePlainString(JPEContainer* container, const char* keystr){
+    if(!container || !container->partialKey){
+        return;
+    }
+    _objSetAddRawValue(container,PLAIN_STRING,JsonString(container->partialKey));
+    container->selectKeyVal = SelectPartialKey; // reset state
 }
 
 void ruleJsonLevelUp(JPEContainer* container, const char* keystr){
@@ -145,15 +182,32 @@ void ruleMakeClosingObjWoQuotes(JPEContainer* container, const char* keystr){
     ruleLevelDown(container,keystr);
 }
 
+void ruleMakeClosingRawValueWoQuotes(JPEContainer* container, const char* keystr){
+    ruleMakePlainValue(container,keystr);
+    ruleLevelDown(container,keystr);
+}
+
+void ruleMakeClosingStringWoQuotes(JPEContainer* container, const char* keystr){
+    ruleMakePlainString(container,keystr);
+    ruleLevelDown(container,keystr);
+}
+
+
 const JExprRule JExprRules[SIZE_JEXPRRULES]={
     {(JParseElement[]){JPE_STRTER,JPE_STRTER},2,JPE_OBJ,&ruleMakeKeyValue}, // ".."
     {(JParseElement[]){JPE_COLUMN,JPE_OBJ},2,JPE_KEY,&ruleMakeSelect}, // key: "..":
     {(JParseElement[]){JPE_OBJ,JPE_KEY},2,JPE_VAL,&ruleMakeObj}, // jval:  "..":".."
-    {(JParseElement[]){JPE_SEPERATE,JPE_KEY},2,JPE_VAL,&ruleMakeObjWoQuotes}, // jval: "..":.., (force to make int/string)
-    {(JParseElement[]){JPE_CLOSE,JPE_KEY,JPE_OPEN,JPE_KEY},4,JPE_JSON,&ruleMakeClosingObjWoQuotes}, // jval: "..":..} (force to make int/string)
-    {(JParseElement[]){JPE_ACLOSE,JPE_KEY,JPE_AOPEN,JPE_KEY},4,JPE_JSON,&ruleMakeClosingObjWoQuotes}, // jval: "..":..] (force to make int/string)
-    {(JParseElement[]){JPE_CLOSE,JPE_KEY},2,JPE_VAL,&ruleMakeClosingObjWoQuotes},
-    {(JParseElement[]){JPE_ACLOSE,JPE_KEY},2,JPE_VAL,&ruleMakeClosingObjWoQuotes},
+    {(JParseElement[]){JPE_SEPERATE,JPE_KEY},2,JPE_MULTIVALS,&ruleMakeObjWoQuotes}, // jval: "..":.., (force to make int/string)
+    {(JParseElement[]){JPE_SEPERATE,JPE_AOPEN},2,JPE_AOPENVAL,&ruleMakePlainValue},// [xx,]
+    {(JParseElement[]){JPE_SEPERATE,JPE_AOPENVAL},2,JPE_AOPENVAL,&ruleMakePlainValue},// [xx,]
+    {(JParseElement[]){JPE_SEPERATE,JPE_OBJ,JPE_AOPEN},3,JPE_AOPENVAL,&ruleMakePlainString},// ["xx",]
+    {(JParseElement[]){JPE_SEPERATE,JPE_OBJ,JPE_AOPENVAL},3,JPE_AOPENVAL,&ruleMakePlainString},// ["xx",]
+    {(JParseElement[]){JPE_ACLOSE,JPE_OBJ,JPE_AOPENVAL,JPE_KEY},4,JPE_JVAL,&ruleMakeClosingStringWoQuotes},
+    {(JParseElement[]){JPE_ACLOSE,JPE_AOPENVAL,JPE_KEY},3,JPE_JVAL,&ruleMakeClosingRawValueWoQuotes},
+    {(JParseElement[]){JPE_CLOSE,JPE_KEY,JPE_OPEN},3,JPE_JSON,&ruleMakeClosingObjWoQuotes}, // jval: "..":..} (force to make int/string)
+    {(JParseElement[]){JPE_ACLOSE,JPE_KEY,JPE_AOPEN},3,JPE_JSON,&ruleMakeClosingObjWoQuotes}, // jval: "..":..] (force to make int/string)
+    {(JParseElement[]){JPE_CLOSE,JPE_KEY},2,JPE_VALCLOSED,&ruleMakeObjWoQuotes},
+    {(JParseElement[]){JPE_ACLOSE,JPE_KEY},2,JPE_VALACLOSED,&ruleMakeObjWoQuotes},
     {(JParseElement[]){JPE_OPEN,JPE_KEY},2,JPE_NULL,&ruleJsonLevelUp}, 
     {(JParseElement[]){JPE_AOPEN,JPE_KEY},2,JPE_NULL,&ruleArrLevelUp}, 
    
@@ -167,11 +221,17 @@ const JExprRule JExprRules[SIZE_JEXPRRULES]={
     {(JParseElement[]){JPE_SEPERATE,JPE_MULTIVALS},2,JPE_MULTIVALS,NULL}, // !! weird case: {"a":"b",,,,,}
     {(JParseElement[]){JPE_JVAL,JPE_MULTIVALS},2,JPE_MULTIVALS,NULL},
     {(JParseElement[]){JPE_VAL,JPE_MULTIVALS},2,JPE_MULTIVALS,NULL},
+    {(JParseElement[]){JPE_MULTIVALS,JPE_MULTIVALS},2,JPE_MULTIVALS,NULL},
+    {(JParseElement[]){JPE_VALACLOSED,JPE_MULTIVALS},2,JPE_VALACLOSED,NULL},
+    {(JParseElement[]){JPE_VALCLOSED,JPE_MULTIVALS},2,JPE_VALCLOSED,NULL},
     
+    {(JParseElement[]){JPE_VALCLOSED,JPE_OPEN},2,JPE_JSON,&ruleLevelDown},
+    {(JParseElement[]){JPE_VALACLOSED,JPE_AOPEN},2,JPE_JSON,&ruleLevelDown},
     {(JParseElement[]){JPE_ACLOSE,JPE_VAL,JPE_AOPEN},3,JPE_JSON,&ruleLevelDown},
     {(JParseElement[]){JPE_ACLOSE,JPE_JSON,JPE_AOPEN},3,JPE_JSON,&ruleLevelDown},
     {(JParseElement[]){JPE_ACLOSE,JPE_MULTIVALS,JPE_AOPEN},3,JPE_JSON,&ruleLevelDown},
     {(JParseElement[]){JPE_CLOSE,JPE_VAL,JPE_OPEN},3,JPE_JSON,&ruleLevelDown},
+    {(JParseElement[]){JPE_CLOSE,JPE_JVAL,JPE_OPEN},3,JPE_JSON,&ruleLevelDown},
     {(JParseElement[]){JPE_CLOSE,JPE_JSON,JPE_OPEN},3,JPE_JSON,&ruleLevelDown},
     {(JParseElement[]){JPE_CLOSE,JPE_MULTIVALS,JPE_OPEN},3,JPE_JSON,&ruleLevelDown},
     
@@ -183,13 +243,13 @@ const JExprRule* JResultFromExp(int (*allhit)(const JParseElement*,int,void**), 
     for(size_t i = 0;i<SIZE_JEXPRRULES;i++){
         const JExprRule* jr = &(JExprRules[i]);
         if(allhit(jr->rules,jr->ruleLen,checker)){
-            
+            /*
             printf("rule: ");
             for(size_t j=0;j<jr->ruleLen;j++){
                 printf("%s,",JPENAME[jr->rules[j]]);
             }
             printf("->%s\n",JPENAME[jr->result]);
-            
+            */
             return &(JExprRules[i]);
         }
     }

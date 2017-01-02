@@ -22,11 +22,12 @@ void testJSON(void){
     JsonObject* friend = MakeJsonObject();
     JsonSet(&friend,"name",JSTRING, JsonString("jon"));
     JsonAdd(&jarr,"friend",JSONOBJ,friend);
+    JsonAddRawValue(&jarr,PLAIN_INTEGER,JsonInteger(111));
     JsonSet(&content,"records",JSONARR,jarr);
     
     JsonObjectPrint(content);
     
-    JString* namej = JsonGetString(&content,"info/mobile");
+    JString* namej = JsonGetString(&content,"info/mobile",NULL);
     if(namej != NULL)
         printf("get %.*s\n",namej->len,namej->str);
     
@@ -66,10 +67,18 @@ void testDArray(void){
 }
 
 void testParseJson(void){
-    const char checking[] = "{\"abc\":123,\"def\":,\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":},,,\"arr\":[\"arr1\":1234]}";
+    const char checking[] = "{\"abc\":123,\"def\":,\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":},,,\"arr\":[\"arr1\":1234],\"arr2\":[1,2,3]}";
+    int ret;
     JsonObject* jsonobj = MakeJsonObject();
-    JsonParse(checking, strlen(checking),&jsonobj);
+    ret = JsonParse(checking, strlen(checking),&jsonobj);
     JsonObjectPrint(jsonobj);
+    if(ret == 1){
+        JString* namej = JsonString(NULL);
+        if(JsonGetString(&jsonobj,"arr2",namej)!=NULL){
+            printf("get %.*s\n",namej->len,namej->str);
+        }
+        FreeJString(&namej);
+    }
     FreeJsonObject(&jsonobj);
 }
 

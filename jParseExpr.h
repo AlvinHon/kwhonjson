@@ -19,6 +19,9 @@ typedef enum{
     JPE_OBJ,
     JPE_VAL,
     JPE_JVAL,
+    JPE_AOPENVAL,
+    JPE_VALCLOSED,
+    JPE_VALACLOSED,
     JPE_MULTIVALS,
     JPE_KEY,
     JPE_JSON,
@@ -67,7 +70,7 @@ typedef struct{
 
 
 extern const char* JPENAME[];
-#define SIZE_JEXPRRULES 26
+#define SIZE_JEXPRRULES 38
 extern const JExprRule JExprRules[];
 
 const JExprRule* JResultFromExp(int (*allhit)(const JParseElement*,int,void**), void** checker);

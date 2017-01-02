@@ -32,7 +32,7 @@ Usage
     
     JsonObjectPrint(content);
     
-    JString* namej = JsonGetString(&content,"info/mobile");
+    JString* namej = JsonGetString(&content,"info/mobile",NULL);
     if(namej != NULL)
         printf("get %.*s\n",namej->len,namej->str);
     
@@ -50,15 +50,24 @@ get 123456
 
 #### parse from string
 ```c
-const char checking[] = "{\"abc\":123,\"def\":\"apple\",\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":12},\"arr\":[\"arr1\":1234]}";
+const char checking[] = "{\"abc\":123,\"def\":,\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":},,,\"arr\":[\"arr1\":1234],\"arr2\":[1,2,3]}";
+int ret;
 JsonObject* jsonobj = MakeJsonObject();
-JsonParse(checking, strlen(checking),&jsonobj);
+ret = JsonParse(checking, strlen(checking),&jsonobj);
 JsonObjectPrint(jsonobj);
+if(ret == 1){
+    JString* namej = JsonString(NULL);
+    if(JsonGetString(&jsonobj,"arr2",namej)!=NULL){
+        printf("get %.*s\n",namej->len,namej->str);
+    }
+    FreeJString(&namej);
+}
 FreeJsonObject(&jsonobj);
 ```
 output
 ```
-{"abc":123,"def":"apple","obj":{"aaa":"1bb","ty":{"abb":120,"acc":11},"ty2":12},"arr":["arr1":1234]}
+{"abc":123,"def":null,"obj":{"aaa":"1bb","ty":{"abb":120,"acc":11},"ty2":null},"arr":["arr1":1234],"arr2":[1,2,3]}
+get [1,2,3]
 ```
 
 #### parsing special cases
@@ -104,9 +113,11 @@ Progress ( ~ 80%)
 
 String, array, integer, bool and null are the only currenly supported types.
 
+Array could contain strings, integers, bool, or json object. Strings, integers and bools can be mixed together in an array but jsonobject is mutual exclusive.
+
 There are still some incomplete part of the library.
 * json setting on specific path
-* exceptional string/characters
+* nicer API level getters and setters
 
 Build
 ---

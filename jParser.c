@@ -69,21 +69,29 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
 
     // TODO check also first and last char must be { and }
     JPARSE_TRACE("len: %zu\n",len);
+    int escapeflag = 0;
     for(size_t i = 0;i<len;i++){
         // do escape here
         char msgc = msg[i];
-
         if(msgc == '\\' && (i!= len-1)){
-            if(EscapeCharElement(msg[i+1]) != JPE_NULL)
-                continue; // escape here
+            if(escapeflag == 0){ // first '\\'
+                escapeflag = 1;
+            }else if (escapeflag == 1){ // two '\\'
+                escapeflag = 0;
+            }
+        }else if (escapeflag == 1){ // '\\' before
+            escapeflag = 2;
         }
         
         // push char
         JParseElement element = EscapeCharElement(msgc);
-        if(element == JPE_NULL){
+        if(element == JPE_NULL || escapeflag == 2){
             JPARSE_TRACE("\tc-any: %c\n",msgc);
             JPElement* op = MakeJPElement(msgc,JPE_ANY);
             PushAStack(&frameStack,op);
+            if(escapeflag == 2){
+                escapeflag = 0; // reset
+            }
             continue;
         }else{
             JPARSE_TRACE("\tc-elem: %c\n",msgc);
@@ -91,6 +99,7 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
             PushAStack(&frameStack,op);
             JPARSE_TRACE("push %s\n",JPENAME[element]);
         }
+
         
         // check stack
         const JExprRule* jres;
@@ -156,6 +165,11 @@ int JsonParse(const char* msg, size_t len,JsonObject** resJson){
             }
         }while(jres != NULL);
     }
+
+    if(LenAStack(frameStack) != 0){
+        printf("Warning!! Json Object maybe malformed. Stack Size: %d > 0\n", LenAStack(frameStack));
+    }
+    
     FreeContainer(&jcont);
     FreeAStack(&frameStack,&FreeJPElement);
     return 1;

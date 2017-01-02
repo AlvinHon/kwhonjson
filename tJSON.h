@@ -11,7 +11,9 @@ typedef enum{
     JINTEGER,
     JBOOL,
     JNULL,
-    PLAIN_JSTRING
+    PLAIN_STRING,
+    PLAIN_INTEGER,
+    PLAIN_BOOL
 }JValType;
 
 typedef struct{
@@ -30,6 +32,14 @@ struct t_JLinkedObj{
     JLinkedObj* next;
     Jobj* content;
 };
+
+typedef struct{
+    union{
+        Jobj* obj;
+        JLinkedObj* array;
+    }thing;
+    int kind;   // 0: obj, 1: array
+}JSearchable;
 
 typedef struct{
     JLinkedObj* array;
@@ -51,8 +61,6 @@ typedef struct{
 JsonObject* MakeJsonObject();
 JsonArray* MakeJArray();
 
-int DefineJType(const char* content, size_t len, JValType* out);
-
 JString* JsonString(const char* name);
 int* JsonInteger(int i);
 char* JsonBool(char torf);
@@ -60,11 +68,10 @@ void FreeJString(JString** jstr);
 
 JsonObject* JsonSet(JsonObject* *object, const char* key, JValType type, void* val);
 void JsonAdd(JsonArray* *array, const char* key, JValType type, void* val);
+void JsonAddRawValue(JsonArray* *jarray, JValType type, void* val);
 
-Jobj* JsonGet(JsonObject* *object,const char* path);
-JString* JsonGetString(JsonObject* *object, const char* path);
-int* JsonGetInt(JsonObject* *object, const char* path);
-char* JsonGetBool(JsonObject* *object, const char* path);
+JSearchable JsonGet(JsonObject* *object,const char* path);
+JString* JsonGetString(JsonObject* *object, const char* path, JString* forceStr);
 
 void FreeJsonObject(JsonObject* *object);
 void JsonObjectFPrint(const JsonObject* onject, FILE* f);

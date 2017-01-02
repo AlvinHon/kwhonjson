@@ -7,5 +7,7 @@
 #include <ctype.h>
 
 int IsStrNumber(const char* str);
+int IsStrNull(const char* str);
+int IsStrBool(const char* str);
 
 #endif
