@@ -1,4 +1,4 @@
-KwhonJson - a json library in only standard C
+SimplyJson - a json library in only standard C
 ===
 
 The goal of this project is to create a simple json library in c, without any dependencies on other open source libraries but just standard C. It should be good for developers who want to have minimal use of json parser. The json library should allow programmer to create/modify json model to ease their development. The simpliest case would be to accept a json file to read/manipulate certain key values inside the json object. 
@@ -133,10 +133,10 @@ or to build a library
 ```
 make library
 ```
-It should output kwhonjson.a file in lib folder.
+It should output simplyjson.a file in lib folder.
 
 To programmer do not know how to link the library to your code, simply do this:
 ```sh
 gcc -g -Wall -c main.c -o main.o ## compile your own code to object files
-gcc -g -Wall -o main.out main.o lib/kwhonjson.a
+gcc -g -Wall -o main.out main.o lib/simplyjson.a
 ```
