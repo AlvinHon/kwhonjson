@@ -108,17 +108,6 @@ interpretation:
 {"abc":null,"def":null}
 ```
 
-Progress ( ~ 80%)
----
-
-String, array, integer, bool and null are the only currenly supported types.
-
-Array could contain strings, integers, bool, or json object. Strings, integers and bools can be mixed together in an array but jsonobject is mutual exclusive.
-
-There are still some incomplete part of the library.
-* json setting on specific path
-* nicer API level getters and setters
-
 Build
 ---
 
