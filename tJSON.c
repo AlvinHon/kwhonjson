@@ -75,25 +75,35 @@ JString* JsonString(const char* name){
     return ret;
 }
 
+void FreeJString(JString** jstr) {
+	(*jstr)->len = 0;
+	if ((*jstr)->str) {
+		TJSON_FREE((*jstr)->str);
+		(*jstr)->str = NULL;
+	}
+	TJSON_FREE(*jstr);
+}
+
+void EditJString(JString** jstr, const char* newcontent) {
+	if ((*jstr)->str) {
+		TJSON_FREE((*jstr)->str);
+		(*jstr)->str = NULL;
+	}
+	(*jstr)->len = strlen(newcontent);
+	(*jstr)->str = (char*)TJSON_MALLOC((*jstr)->len);
+	memcpy((*jstr)->str, newcontent, (*jstr)->len);
+}
+
 int* JsonInteger(int i){
     int* ret = TJSON_MALLOC(sizeof(int));
     *ret = i;
     return ret;
 }
 
-char* JsonBool(char torf){
-    char* ret = TJSON_MALLOC(sizeof(char));
-    *ret = torf == 't'? 't':'f';
-    return ret;
-}
-
-void FreeJString(JString** jstr){
-    (*jstr)->len = 0;
-    if((*jstr)->str){
-        TJSON_FREE((*jstr)->str);
-        (*jstr)->str = NULL;
-    }
-    TJSON_FREE(*jstr);
+char* JsonBool(char torf) {
+	char* ret = TJSON_MALLOC(sizeof(char));
+	*ret = torf == 't' ? 't' : 'f';
+	return ret;
 }
 
 Jobj* MakeJobj(const char* key, JValType type, void* content){
@@ -102,6 +112,21 @@ Jobj* MakeJobj(const char* key, JValType type, void* content){
     ret->type=content?type:JNULL;
     ret->key = JsonString(key);
     return ret;
+}
+
+void EditJobj(Jobj** jobj, JValType newtype, void* newi) {
+	if ((*jobj)->type == JINTEGER && newtype == JINTEGER) {
+		if ((*jobj)->content != NULL) {
+			TJSON_FREE((*jobj)->content);
+			(*jobj)->content = JsonInteger(*(int*)(newi));
+		}
+	}
+	else if ((*jobj)->type == JBOOL && newtype == JBOOL) {
+		if ((*jobj)->content != NULL) {
+			TJSON_FREE((*jobj)->content);
+			(*jobj)->content = JsonBool(*(char*)(newi));
+		}
+	}
 }
 
 JsonArray* MakeJArray(){
@@ -156,12 +181,12 @@ void JsonFPrint(const Jobj* obj, FILE* f){
     if(obj != NULL){
         // print key first for json object
         if(obj->type == JSONOBJ || obj->type==JSTRING || obj->type == JSONARR
-            || obj->type == JINTEGER || obj->type == JNULL )
+            || obj->type == JINTEGER || obj->type == JBOOL || obj->type == JNULL )
             fprintf(f,"\"%.*s\":",obj->key->len,obj->key->str);
         
         if(obj->type == JSONOBJ){
             fprintf(f,"{");
-            JsonObjectPrint((const JsonObject*)(obj->content));
+            JsonObjectFPrint((const JsonObject*)(obj->content), f);
             fprintf(f,"}");
         }else if (obj->type == JINTEGER || obj->type == PLAIN_INTEGER){
             int* intv = (int*) (obj->content);
@@ -185,7 +210,7 @@ void JsonFPrint(const Jobj* obj, FILE* f){
                 
                 while(jcur->next != NULL){
                     jcur = jcur->next;
-                    JsonPrint(jcur->content);
+					JsonFPrint(jcur->content, f);
                     if(jcur->next != NULL)
                         fprintf(f,",");
                 }
@@ -213,7 +238,6 @@ void JsonObjectFPrint(const JsonObject* object, FILE* f){
 void JsonObjectPrint(const JsonObject* object){
    JsonObjectFPrint(object,stdout);
 }
-
 
 JsonObject* JsonSet(JsonObject* *object, const char* key, JValType type, void* val){
     int nlen = (*object)->len + 1;
@@ -251,8 +275,8 @@ JSearchable JsonGet(JsonObject* *object,const char* path){
         if(oleveltype == JSONOBJ){
             for(int i = 0;i<olevel->len;i++){
                 Jobj* searchobj = olevel->objects[i];
-                //printf("level: %d %s vs %s\n",i,searchobj->key->str,xlevel->path);
-                if(strcmp(searchobj->key->str,xlevel->path)==0){
+                //printf("level: %d %.*s vs %s\n",i,searchobj->key->len,searchobj->key->str,xlevel->path);
+                if(strlen(xlevel->path) == searchobj->key->len && strncmp(searchobj->key->str,xlevel->path, searchobj->key->len)==0){
                     //printf("hit!\n");
                     if(xlevel->next != NULL){
                         // search next level
@@ -266,14 +290,14 @@ JSearchable JsonGet(JsonObject* *object,const char* path){
                         }
                     }else if (xlevel->next == NULL){
                         // terminating
-                        //printf("terminating!\n");
-                        if(searchobj->type == JSONOBJ){
-                            retSearch.thing.obj = searchobj;
-                            retSearch.kind = 0;
-                        }else if (searchobj->type == JSONARR){
+                        //printf("terminating %d!\n", searchobj->type);
+                        if (searchobj->type == JSONARR){
                             retSearch.thing.array = ((JsonArray*) searchobj->content)->array;;
                             retSearch.kind = 1;
-                        }
+						} else {
+							retSearch.thing.obj = searchobj;
+							retSearch.kind = 0;
+						}
                     }else{
                         // TODO not terminating and this is not json object
                     }
@@ -291,7 +315,7 @@ JSearchable JsonGet(JsonObject* *object,const char* path){
                     // olevelarr is the expected return value
                     retSearch.thing.array = cursor;
                     retSearch.kind = 1;
-                    //printf("plain raw values\n");
+                    printf("plain raw values\n");
                     break;
                 }
                 if(strcmp(searchobj->key->str,xlevel->path) == 0){
@@ -323,10 +347,9 @@ JSearchable JsonGet(JsonObject* *object,const char* path){
     return retSearch;
 }
 
-
 int ConvertToJString(JString* forceStr, Jobj* obj){
-    char intbuf[20];
-    memset(intbuf,0x0,20);
+    char intbuf[256];
+    memset(intbuf,0x0,sizeof(intbuf));
 
     if(forceStr != NULL && obj != NULL){
         // clear forceStr
@@ -337,18 +360,18 @@ int ConvertToJString(JString* forceStr, Jobj* obj){
         forceStr->len = 0;
 
         if(obj->type == JINTEGER){
-            sprintf(intbuf,"%d",*((int*)obj->content));    
+            sprintf_s(intbuf, sizeof(intbuf), "%d",*((int*)obj->content));    
         }else if(obj->type == JSTRING && obj->content != NULL){
             JString* str = (JString*) (obj->content);
-            sprintf(intbuf,"\"%.*s\"",str->len,(const char*)(str->str));
+            sprintf_s(intbuf, sizeof(intbuf), "\"%.*s\"",str->len,(const char*)(str->str));
         }else if(obj->type == JBOOL){
             if(*((char*)obj->content) == 't'){
-                sprintf(intbuf,"true");
+                sprintf_s(intbuf,sizeof(intbuf),"true");
             }else{
-                sprintf(intbuf,"false");
+                sprintf_s(intbuf,sizeof(intbuf),"false");
             }
         }else if(obj->type == JNULL){
-            sprintf(intbuf,"null");
+            sprintf_s(intbuf,sizeof(intbuf),"null");
         }
         
         forceStr->len = strlen(intbuf);
@@ -361,7 +384,7 @@ int ConvertToJString(JString* forceStr, Jobj* obj){
 }
 
 int ConvertArrayToJString(JString* forceStr, JLinkedObj* cursor){
-    char sbuf[20];
+    char sbuf[256];
     char * buf;
     size_t buflen = 1;
 
@@ -380,20 +403,42 @@ int ConvertArrayToJString(JString* forceStr, JLinkedObj* cursor){
         while(cursor != NULL){
             Jobj* obj = cursor->content;
             if(obj != NULL){
+				//printf("cursor type=%d\n", obj->type);
                 if(obj->type == PLAIN_STRING){
                     JString* jstr = (JString*)obj->content;
                     buflen = StrAppend(&buf,buflen,jstr->str,jstr->len);
                 }else if(obj->type == PLAIN_INTEGER){
-                    memset(sbuf,0x0,20);
-                    sprintf(sbuf,"%d",*((int*)obj->content));
+                    memset(sbuf,0x0, sizeof(sbuf));
+                    sprintf_s(sbuf, sizeof(sbuf), "%d",*((int*)obj->content));
                     buflen = StrAppend(&buf,buflen,sbuf,strlen(sbuf));
-                }else if(obj->type == PLAIN_BOOL){
-                    if(*(char*)(obj->content) == 't'){
-                        buflen = StrAppend(&buf,buflen,"true",4);
-                    }else{
-                        buflen = StrAppend(&buf,buflen,"false",4);
-                    }
-                }
+				}
+				else if (obj->type == PLAIN_BOOL) {
+					if (*(char*)(obj->content) == 't') {
+						buflen = StrAppend(&buf, buflen, "true", 4);
+					}
+					else {
+						buflen = StrAppend(&buf, buflen, "false", 4);
+					}
+				}
+				else if (obj->type == JINTEGER) {
+					memset(sbuf, 0x0, sizeof(sbuf));
+					sprintf_s(sbuf, sizeof(sbuf), "%.*s:%d", obj->key->len, obj->key->str, *((int*)obj->content));
+					buflen = StrAppend(&buf, buflen, sbuf, strlen(sbuf));
+				}
+				else if (obj->type == JSTRING) {
+					memset(sbuf, 0x0, sizeof(sbuf));
+					JString* str = (JString*)(obj->content);
+					sprintf_s(sbuf, sizeof(sbuf), "%.*s:%.*s", obj->key->len, obj->key->str, str->len, str->str);
+					buflen = StrAppend(&buf, buflen, sbuf, strlen(sbuf));
+				}
+				else if (obj->type == JBOOL) {
+					memset(sbuf, 0x0, sizeof(sbuf));
+					if(*(char*)(obj->content) == 't')
+						sprintf_s(sbuf, sizeof(sbuf), "%.*s:true", obj->key->len, obj->key->str);
+					else
+						sprintf_s(sbuf, sizeof(sbuf), "%.*s:false", obj->key->len, obj->key->str);
+					buflen = StrAppend(&buf, buflen, sbuf, strlen(sbuf));
+				}
             }
             cursor = cursor->next;
             if(cursor != NULL){
@@ -412,9 +457,9 @@ int ConvertArrayToJString(JString* forceStr, JLinkedObj* cursor){
 /*
 forceStr: NULL if not require forcing output to JString object
 */
-JString* JsonGetString(JsonObject* *object, const char* path, JString* forceStr){
+JString* JsonGetString(JsonObject** object, const char* path, JString* forceStr){
     JSearchable retSearch = JsonGet(object,path);
-
+	
     if(retSearch.kind == 0){
         Jobj* obj = retSearch.thing.obj;
         if(obj != NULL){
@@ -430,9 +475,50 @@ JString* JsonGetString(JsonObject* *object, const char* path, JString* forceStr)
         ConvertArrayToJString(forceStr,retSearch.thing.array);
         return forceStr;
     }
+	
     return NULL;
 }
 
+int JsonEditJString(JsonObject** object, const char* path, const char* newcontent) {
+	JSearchable retSearch = JsonGet(object, path);
+
+	Jobj* obj = retSearch.thing.obj;
+	if (retSearch.kind == 0 && obj != NULL) {
+		if (obj->type == JSTRING && obj->content != NULL) {
+			JString* str = (JString*)(obj->content);
+			EditJString(&str, newcontent);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int JsonEditJInteger(JsonObject** object, const char* path, int val) {
+	JSearchable retSearch = JsonGet(object, path);
+
+	Jobj* obj = retSearch.thing.obj;
+	if (retSearch.kind == 0 && obj != NULL) {
+		if (obj->type == JINTEGER && obj->content != NULL) {
+			EditJobj(&obj, JINTEGER, &val);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int JsonEditJBool(JsonObject** object, const char* path, int val) {
+	char tf = val == 1 ? 't' : 'f';
+	JSearchable retSearch = JsonGet(object, path);
+
+	Jobj* obj = retSearch.thing.obj;
+	if (retSearch.kind == 0 && obj != NULL) {
+		if (obj->type == JBOOL && obj->content != NULL) {
+			EditJobj(&obj, JBOOL, &tf);
+			return 1;
+		}
+	}
+	return 0;
+}
 
 void JsonAdd(JsonArray* *jarray, const char* key, JValType type, void* val){
     JLinkedObj* cur = (*jarray)->array;

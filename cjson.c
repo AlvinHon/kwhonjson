@@ -22,7 +22,7 @@ void testJSON(void){
     JsonObject* friend = MakeJsonObject();
     JsonSet(&friend,"name",JSTRING, JsonString("jon"));
     JsonAdd(&jarr,"friend",JSONOBJ,friend);
-    JsonAddRawValue(&jarr,PLAIN_INTEGER,JsonInteger(111));
+    JsonAddRawValue(&jarr,PLAIN_INTEGER,(void*)JsonInteger(111));
     JsonSet(&content,"records",JSONARR,jarr);
     
     JsonObjectPrint(content);
@@ -67,13 +67,17 @@ void testDArray(void){
 }
 
 void testParseJson(void){
-    const char checking[] = "{\"abc\":123,\"def\":,\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":},,,\"arr\":[\"arr1\":1234],\"arr2\":[1,2,3]}";
+    const char checking[] = "{\"abc\":123,\"def\":\"a\",\"yes\":true,\"obj\":{\"aaa\":1bb,\"ty\":{\"abb\":120,\"acc\":11},\"ty2\":},,,\"arr\":[\"arr1\":1234, \"brr1\":\"11\", \"a\":true], \"def2\":12,\"arr2\":[1,2,3]}";
     int ret;
     JsonObject* jsonobj = MakeJsonObject();
     ret = JsonParse(checking, strlen(checking),&jsonobj);
     JsonObjectPrint(jsonobj);
+	JsonEditJString(&jsonobj, "def", "bcd");
+	JsonEditJInteger(&jsonobj, "abc", 124);
+	JsonEditJBool(&jsonobj, "yes", 0);
+	JsonObjectPrint(jsonobj);
     if(ret == 1){
-        JString* namej = JsonString(NULL);
+		JString* namej = JsonString(NULL);
         if(JsonGetString(&jsonobj,"arr2",namej)!=NULL){
             printf("get %.*s\n",namej->len,namej->str);
         }
@@ -85,5 +89,6 @@ void testParseJson(void){
 
 int main(int argc, char*argv[]){
     printf("https://github.com/AlvinHon/kwhonjson/\n");
+	testParseJson();
 	return 0;
 }

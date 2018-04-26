@@ -20,7 +20,7 @@ PathStr* MakePath(char seperator, const char* path, int len){
                         ret = malloc(sizeof(PathStr));
                         ret->path = malloc(sizeof(char)*(plen+1));
                         ret->next = NULL;
-                        strncpy(ret->path,path+start,plen);
+                        strncpy_s(ret->path, sizeof(char)*(plen+1), path+start,plen);
                     }else{
                         PathStr* tail = ret;
                         while(tail->next != NULL){
@@ -29,7 +29,7 @@ PathStr* MakePath(char seperator, const char* path, int len){
                         tail->next = malloc(sizeof(PathStr));
                         tail->next->path = malloc(sizeof(char)*(plen)+1);
                         tail->next->next = NULL;
-                        strncpy(tail->next->path,path+start,plen);
+                        strncpy_s(tail->next->path, sizeof(char)*(plen)+1, path+start,plen);
                     }
                     start = i+1;
                 }

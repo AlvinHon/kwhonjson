@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stddef.h>
 
-typedef enum{
+typedef enum {
     JSONOBJ,
     JSONARR,
     JSTRING,
@@ -71,7 +71,10 @@ void JsonAdd(JsonArray* *array, const char* key, JValType type, void* val);
 void JsonAddRawValue(JsonArray* *jarray, JValType type, void* val);
 
 JSearchable JsonGet(JsonObject* *object,const char* path);
-JString* JsonGetString(JsonObject* *object, const char* path, JString* forceStr);
+JString* JsonGetString(JsonObject** object, const char* path, JString* forceStr);
+int JsonEditJString(JsonObject** object, const char* path, const char* newcontent);
+int JsonEditJInteger(JsonObject** object, const char* path, int val);
+int JsonEditJBool(JsonObject** object, const char* path, int val);
 
 void FreeJsonObject(JsonObject* *object);
 void JsonObjectFPrint(const JsonObject* onject, FILE* f);
